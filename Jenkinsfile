@@ -8,14 +8,15 @@ pipeline {
     stages {
         stage('Build Application') {
             steps {
-                bat 'mvnw.cmd clean package'
+                sh 'chmod +x mvnw'
+                sh './mvnw clean package'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                bat 'docker build -t %IMAGE_NAME%:%BUILD_NUMBER% .'
-                bat 'docker tag %IMAGE_NAME%:%BUILD_NUMBER% %IMAGE_NAME%:latest'
+                sh 'docker build -t $IMAGE_NAME:$BUILD_NUMBER .'
+                sh 'docker tag $IMAGE_NAME:$BUILD_NUMBER $IMAGE_NAME:latest'
             }
         }
 
@@ -26,9 +27,9 @@ pipeline {
                     usernameVariable: 'DOCKERHUB_USER',
                     passwordVariable: 'DOCKERHUB_TOKEN'
                 )]) {
-                    bat 'echo %DOCKERHUB_TOKEN%| docker login -u %DOCKERHUB_USER% --password-stdin'
-                    bat 'docker push %IMAGE_NAME%:%BUILD_NUMBER%'
-                    bat 'docker push %IMAGE_NAME%:latest'
+                    sh 'echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USER" --password-stdin'
+                    sh 'docker push $IMAGE_NAME:$BUILD_NUMBER'
+                    sh 'docker push $IMAGE_NAME:latest'
                 }
             }
         }
@@ -36,7 +37,7 @@ pipeline {
 
     post {
         always {
-            bat 'docker logout'
+            sh 'docker logout || true'
         }
     }
 }
