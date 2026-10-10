@@ -6,13 +6,6 @@ environment {
 }
 
 stages {
-    stage('Checkout') {
-        steps {
-            git branch: 'master',
-                url: 'https://github.com/meriem-mejri/docker-spring-boot.git'
-        }
-    }
-
     stage('Build Application') {
         steps {
             bat 'mvnw.cmd clean package'
