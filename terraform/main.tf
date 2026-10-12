@@ -2,14 +2,26 @@ provider "aws" {
   region = var.aws_region
 }
 
-resource "aws_vpc" "my_vpc" {
-  cidr_block = var.vpc_cidr  # Utilisation de la variable pour le CIDR
+# ADDED: use the default VPC and subnets of the account
+data "aws_vpc" "default" {
+  default = true
+}
+
+data "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+  filter {
+    name   = "availability-zone"
+    values = ["us-east-1a", "us-east-1b"]
+  }
 }
 
 resource "aws_security_group" "eks_cluster_sg" {
   name        = "eks-cluster-sg-${var.cluster_name}"
   description = "Security group for EKS cluster ${var.cluster_name}"
-  vpc_id      = var.vpc_id  # Utilisation de la variable pour l'ID du VPC
+  vpc_id      = data.aws_vpc.default.id
 
   ingress {
     from_port   = 8083
@@ -40,7 +52,7 @@ resource "aws_security_group" "eks_cluster_sg" {
 resource "aws_security_group" "eks_worker_sg" {
   name        = "eks-worker-sg-${var.cluster_name}"
   description = "Security group for EKS worker nodes ${var.cluster_name}"
-  vpc_id      = var.vpc_id  # Utilisation de la variable pour l'ID du VPC
+  vpc_id      = data.aws_vpc.default.id 
 
   ingress {
     from_port   = 8083
@@ -71,10 +83,10 @@ resource "aws_security_group" "eks_worker_sg" {
 resource "aws_eks_cluster" "my_cluster" {
   name     = var.cluster_name
   role_arn = var.role_arn
-  version  = "1.30"
+  version  = "1.35"
 
   vpc_config {
-    subnet_ids         = var.subnet_ids
+    subnet_ids         = data.aws_subnets.default.ids 
     security_group_ids = [aws_security_group.eks_cluster_sg.id]
   }
 }
@@ -83,7 +95,7 @@ resource "aws_eks_node_group" "my_node_group" {
   cluster_name    = aws_eks_cluster.my_cluster.name
   node_group_name = "noeud1"
   node_role_arn   = var.role_arn
-  subnet_ids      = var.subnet_ids
+  subnet_ids      = data.aws_subnets.default.ids 
 
   scaling_config {
     desired_size = 2
